@@ -234,9 +234,7 @@ static FILE *createpath(name)
 	return fp;
 }
 
-/* Create a link, or copy a file.  If the file is copied (not linked) then
- * give a warning.
- */
+/* copy a file TODO */
 static void linkorcopy(src, dst, sym)
 	char	*src;	/* name of existing source file */
 	char	*dst;	/* name of new destination file */
@@ -261,34 +259,6 @@ static void linkorcopy(src, dst, sym)
 	if (!fpdst)
 		/* error message already given */
 		return;
-
-#ifdef _POSIX_SOURCE
-# ifndef _WEAK_POSIX
-	/* first try to link it over, instead of copying */
-	fclose(fpdst);
-	unlink(dst);
-	if (sym)
-	{
-		if (symlink(src, dst))
-		{
-			perror(dst);
-		}
-		fclose(fpsrc);
-		return;
-	}
-	if (!link(src, dst))
-	{
-		/* This story had a happy ending */
-		fclose(fpsrc);
-		return;
-	}
-
-	/* Dang.  Reopen the destination again */
-	fpdst = fopen(dst, "wb");
-	/* This *can't* fail */
-
-# endif /* _WEAK_POSIX */
-#endif /* _POSIX_SOURCE */
 
 	/* Copy characters */
 	while ((c = getc(fpsrc)) != EOF)
@@ -1492,21 +1462,9 @@ static void usage(argv0, exitcode)
 	puts("\n");
 	puts("This program lists/extracts files from a \"*.tar\" or \"*.tgz\" archive.  You can\n");
 	puts("optionally specify certain files or directories to list/extract; otherwise it\n");
-#ifdef _POSIX_SOURCE
-# ifdef _WEAK_POSIX
-	puts("will list/extract them all.  File attributes are preserved fairly well, but\n");
-	puts("linked files are restored via COPYING.  This program can also be used (with -d)\n");
-	puts("to gunzip non-tar files.\n");
-# else /* not _WEAK_POSIX */
-	puts("will list/extract them all.  File attributes are preserved, and linked files\n");
-	puts("will be restored as links.  This program can also be used (with -d) to gunzip\n");
-	puts("non-tar files.\n");
-# endif /* not _WEAK_POSIX */
-#else /* not _POSIX_SOURCE */
 	puts("will list/extract them all.  File attributes are NOT preserved.  Linked files\n");
 	puts("will be restored via COPYING.  This program can also be used (with -d) to\n");
 	puts("gunzip non-tar files.\n");
-#endif /* not _POSIX_SOURCE */
 	puts("\n");
 	puts("THIS PROGRAM IS IN THE PUBLIC DOMAIN, AND IS FREELY REDISTRIBUTABLE.\n");
 	puts("Report bugs to kirkenda@cs.pdx.edu\n");

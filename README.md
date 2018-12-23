@@ -5,7 +5,9 @@ See table with different targets for size comparison. The smallest variation her
 
 The untardos.exe floating around on the internet gives me trouble on a 2 machines, namely a HP OmniBook 2100 with a Pentium MMX and a 386SX-25. untardos.exe simply fails with a opcode dump on these machines. This is why I recompiled everything from source and now it works. 
 
-Different targets have been created to compare size and speed. 
+Different targets have been created to compare size and speed.
+All occurences of `printf,fprintf` have been replaced by `puts,fputs` to save space. This resulted in ~4.2k freed space.
+Verbose output is not yet implemented without printf, it just prints out normally instead. 
  
 This file comes from public domain and was slightly modified to get rid of compiler warnings and a Makefile for OpenWatcom compiler was created. 
  
