@@ -61,6 +61,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <utime.h>
+#include <fcntl.h>
 
 #include <string.h>
 #include <stdlib.h>
@@ -122,7 +123,6 @@ typedef struct huft {
 
 int wp;	/* output counter */
 Uchar_t slide[WSIZE];
-#define error(desc)	{fprintf(stderr, "%s:%s", inname, (desc)); exit(1);}
 
 /* Tables for deflate from PKZIP's appnote.txt. */
 static unsigned border[] = {	/* Order of the bit length code lengths */
@@ -199,7 +199,8 @@ static FILE *createpath(name)
 	/* if we aren't allowed to overwrite and this file exists, return NULL */
 	if (!force && access(name, 0) == 0)
 	{
-		fprintf(stderr, "%s: exists, will not overwrite without \"-f\"\n", name);
+        fputs(name, stderr);
+        fputs(": exists, will not overwrite without \"-f\"\n", stderr);
 		return NULL;
 	}
 
@@ -295,7 +296,8 @@ static void linkorcopy(src, dst, sym)
 	fclose(fpdst);
 
 	/* Give a warning */
-	printf("%s: copy instead of link\n", dst);
+    puts(dst);
+ 	puts(": copy instead of link\n");
 }
 
 /* This calls fwrite(), possibly after converting CR-LF to LF */
@@ -413,8 +415,8 @@ static void untar(blk)
 	else if ((tblk)->filename[0] == '\0')
 	{
 		/* end-of-archive marker */
-		if (didabs)
-			fprintf(stderr, "WARNING: Removed leading slashes because \"-p\" wasn't given.\n");
+ 		if (didabs)
+ 			fputs("WARNING: Removed leading slashes because \"-p\" wasn't given.\n", stderr);
 		exit(0);
 	}
 	else
@@ -429,12 +431,13 @@ static void untar(blk)
 		{
 			if (first)
 			{
-				fprintf(stderr, "%s: not a valid tar file\n", inname);
+                fputs(inname, stderr);
+ 				fputs(": not a valid tar file\n", stderr);
 				exit(2);
 			}
 			else
 			{
-				printf("WARNING: Garbage detected; preceding file may be damaged\n");
+ 				puts("WARNING: Garbage detected; preceding file may be damaged\n");
 				exit(2);
 			}
 		}
@@ -483,10 +486,14 @@ static void untar(blk)
 		}
 		if (sum != checksum(tblk, 0) && sum != checksum(tblk, 1))
 		{
-			if (!first)
-				printf("WARNING: Garbage detected; preceding file may be damaged\n");
-			fflush(stdout);
-			fprintf(stderr, "%s: header has bad checksum for %s\n", inname, nbuf);
+ 			if (!first) {
+ 				puts("WARNING: Garbage detected; preceding file may be damaged\n");
+            }
+ 			fflush(stdout);
+            fputs(inname, stderr);
+            fputs(": header has bad checksum for ", stderr);
+            fputs(nbuf, stderr);
+            fputs("\n", stderr);
 			exit(2);
 		}
 
@@ -544,19 +551,29 @@ static void untar(blk)
 			}
 		}
 
-		/* list the file */
-		if (verbose)
-			printf("%c %s",
-				ISREGULAR(*tblk) ? '-' : ("hlcbdp"[(tblk)->type - '1']),
-				nbuf);
-		else if (!quiet)
-			printf("%s\n", nbuf);
+// 		/* list the file */
+// 		if (verbose)
+// 			printf("%c %s",
+// 				ISREGULAR(*tblk) ? '-' : ("hlcbdp"[(tblk)->type - '1']),
+// 				nbuf);
+// 		else if (!quiet)
+// 			printf("%s\n", nbuf);
+        if(verbose) {       /* TODO verbose output */
+            puts(nbuf);
+            puts("\n");
+        } else if (!quiet) {
+            puts(nbuf);
+            puts("\n");
+        }
 
 		/* if link, then do the link-or-copy thing */
 		if (tblk->type == '1' || tblk->type == '2')
 		{
-			if (verbose)
-				printf(" -> %s\n", tblk->linkto);
+ 			if (verbose) {
+                puts(" -> ");
+                puts(tblk->linkto);
+                puts("\n");
+            }
 			if (!listing)
 				linkorcopy(tblk->linkto, nbuf, tblk->type == '2');
 			outsize = 0L;
@@ -580,8 +597,10 @@ static void untar(blk)
 				n2 = " created";
 			else
 				n2 = " ignored";
-			if (verbose)
-				printf("%s\n", n2);
+ 			if (verbose) {
+                puts(n2);
+                puts("\n");
+            }
 			return;
 		}
 
@@ -589,20 +608,20 @@ static void untar(blk)
 		if (!ISREGULAR(*tblk))
 		{
 			if (verbose)
-				printf(" ignored\n");
+				puts(" ignored\n");
 			outsize = 0L;
 			return;
 		}
 
-		/* print file statistics */
-		if (verbose)
-		{
-			printf(" (%ld byte%s, %ld tape block%s)\n",
-				outsize,
-				outsize == 1 ? "" : "s",
-				(outsize + TSIZE - 1) / TSIZE,
-				(outsize > 0  && outsize <= TSIZE) ? "" : "s");
-		}
+		/* print file statistics TODO */
+// 		if (verbose)
+// 		{
+// 			printf(" (%ld byte%s, %ld tape block%s)\n",
+// 				outsize,
+// 				outsize == 1 ? "" : "s",
+// 				(outsize + TSIZE - 1) / TSIZE,
+// 				(outsize > 0  && outsize <= TSIZE) ? "" : "s");
+// 		}
 
 		/* if extracting, then try to create the file */
 		if (!listing)
@@ -1177,8 +1196,10 @@ int inflate_dynamic()
 	if ((i = huft_build(ll, nl, 257, cplens, cplext, &tl, &bl)) != 0)
 	{
 		if (i == 1) {
-			error(" incomplete literal tree\n");
-			huft_free(tl);
+            fputs(inname, stderr);
+            fputs(": incomplete literal tree\n", stderr);
+            exit(1);
+			//huft_free(tl);
 		}
 		return i;	/* incomplete code set */
 	}
@@ -1186,8 +1207,10 @@ int inflate_dynamic()
 	if ((i = huft_build(ll + nl, nd, 0, cpdist, cpdext, &td, &bd)) != 0)
 	{
 		if (i == 1) {
-			error(" incomplete distance tree\n");
-			huft_free(td);
+            fputs(inname, stderr);
+            fputs(": incomplete distance tree\n", stderr);
+            exit(1);        
+			//huft_free(td);
 		}
 		huft_free(tl);
 		return i;	/* incomplete code set */
@@ -1302,7 +1325,7 @@ static void doarchive(filename)
 	infp = fopen(filename, "rb");
 	if (!infp)
 	{
-		perror(filename);
+ 		perror(filename);
 		return;
 	}
 
@@ -1316,7 +1339,7 @@ static void doarchive(filename)
 		/* Check for unsupported compression types */
 		if (((gzhdr_t *)slide)->compression != DEFLATE)
 		{
-			fprintf(stderr, "Unsupported compression type\n");
+			fputs("Unsupported compression type\n", stderr);
 			exit(1);
 		}
 
@@ -1366,7 +1389,10 @@ static void doarchive(filename)
 		{
 			if (!quiet && listing)
 			{
-				printf("%s: would be gunzipped to %s\n", filename, gunzipname);
+                puts(filename);
+				puts(": would be gunzipped to ");
+                puts(gunzipname);
+                puts("\n");
 				fclose(infp);
 				return;
 			}
@@ -1374,7 +1400,8 @@ static void doarchive(filename)
 			/* if not allowed to overwrite and file exists, complain */
 			if (!force && access(gunzipname, 0) == 0)
 			{
-				fprintf(stderr, "%s: exists, will not overwrite without \"-f\"\n", gunzipname);
+                fputs(gunzipname, stderr);
+                fputs(": exists, will not overwrite without \"-f\"\n", stderr);
 				exit(2);
 			}
 			tarfp = fopen(gunzipname, convert ? "w" : "wb");
@@ -1388,7 +1415,8 @@ static void doarchive(filename)
 		/* inflate the blocks */
 		if (inflate() != 0)
 		{
-			fprintf(stderr, "%s: bad compression data\n", filename);
+            fputs(filename, stderr);
+			fputs(": bad compression data\n", stderr);
 			exit(2);
 		}
 	}
@@ -1399,7 +1427,8 @@ static void doarchive(filename)
 		/* if we were supposed to just decompress, complain */
 		if (maketar)
 		{
-			fprintf(stderr, "%s: isn't gzipped\n", filename);
+            fputs(filename, stderr);
+			fputs(": isn't gzipped\n", stderr);
 			fclose(infp);
 			return;
 		}
@@ -1422,12 +1451,15 @@ static void doarchive(filename)
 		tarfp = NULL;
 		if (!quiet)
 		{
-			printf("%s: gunzipped to %s\n", filename, gunzipname);
+            puts(filename);
+			puts(": gunzipped to ");
+            puts(gunzipname);
+            puts("\n");
 		}
 	}
 	if (outsize > 0)
 	{
-		printf("WARNING: Last file might be truncated!\n");
+		puts("WARNING: Last file might be truncated!\n");
 		fclose(outfp);
 		outfp = NULL;
 	}
@@ -1438,38 +1470,43 @@ static void usage(argv0, exitcode)
 	int	exitcode;/* exit status -- 0 for success, non-0 for failure */
 {
 	/* Give a usage message and exit */
-	printf("Usage: %s [options] archive.tgz [filename] ...\n", argv0);
-	printf("   or: %s [options] -d filename.gz ...\n", argv0);
-	printf("\n");
-	printf("Options: -t   Test -- list contents but don't extract\n");
-	printf("         -f   Force -- allow existing files to be overwritten\n");
-	printf("         -q   Quiet -- suppress the normal chatter\n");
-	printf("         -v   Verbose -- output extra information about each file\n");
-	printf("         -p   Path -- allow absolute pathnames (don't strip leading '/')\n");
-	printf("         -c   Convert -- convert files to local text format\n");
-	printf("         -d   Decompress -- perform \"gunzip\" but not \"tar x\"\n");
-	printf("         -n   No-name -- with \"-d\", ignore original name in gzip header\n");
-	printf("\n");
-	printf("This program lists/extracts files from a \"*.tar\" or \"*.tgz\" archive.  You can\n");
-	printf("optionally specify certain files or directories to list/extract; otherwise it\n");
+    puts("Usage: ");
+    puts(argv0);
+    puts(" [options] archive.tgz [filename] ...\n");
+    puts("   or: ");
+    puts(argv0);
+    puts(" [options] -d filename.gz ...\n");
+    
+	puts("\n");
+	puts("Options: -t   Test -- list contents but don't extract\n");
+	puts("         -f   Force -- allow existing files to be overwritten\n");
+	puts("         -q   Quiet -- suppress the normal chatter\n");
+	puts("         -v   Verbose -- output extra information about each file\n");
+	puts("         -p   Path -- allow absolute pathnames (don't strip leading '/')\n");
+	puts("         -c   Convert -- convert files to local text format\n");
+	puts("         -d   Decompress -- perform \"gunzip\" but not \"tar x\"\n");
+	puts("         -n   No-name -- with \"-d\", ignore original name in gzip header\n");
+	puts("\n");
+	puts("This program lists/extracts files from a \"*.tar\" or \"*.tgz\" archive.  You can\n");
+	puts("optionally specify certain files or directories to list/extract; otherwise it\n");
 #ifdef _POSIX_SOURCE
 # ifdef _WEAK_POSIX
-	printf("will list/extract them all.  File attributes are preserved fairly well, but\n");
-	printf("linked files are restored via COPYING.  This program can also be used (with -d)\n");
-	printf("to gunzip non-tar files.\n");
+	puts("will list/extract them all.  File attributes are preserved fairly well, but\n");
+	puts("linked files are restored via COPYING.  This program can also be used (with -d)\n");
+	puts("to gunzip non-tar files.\n");
 # else /* not _WEAK_POSIX */
-	printf("will list/extract them all.  File attributes are preserved, and linked files\n");
-	printf("will be restored as links.  This program can also be used (with -d) to gunzip\n");
-	printf("non-tar files.\n");
+	puts("will list/extract them all.  File attributes are preserved, and linked files\n");
+	puts("will be restored as links.  This program can also be used (with -d) to gunzip\n");
+	puts("non-tar files.\n");
 # endif /* not _WEAK_POSIX */
 #else /* not _POSIX_SOURCE */
-	printf("will list/extract them all.  File attributes are NOT preserved.  Linked files\n");
-	printf("will be restored via COPYING.  This program can also be used (with -d) to\n");
-	printf("gunzip non-tar files.\n");
+	puts("will list/extract them all.  File attributes are NOT preserved.  Linked files\n");
+	puts("will be restored via COPYING.  This program can also be used (with -d) to\n");
+	puts("gunzip non-tar files.\n");
 #endif /* not _POSIX_SOURCE */
-	printf("\n");
-	printf("THIS PROGRAM IS IN THE PUBLIC DOMAIN, AND IS FREELY REDISTRIBUTABLE.\n");
-	printf("Report bugs to kirkenda@cs.pdx.edu\n");
+	puts("\n");
+	puts("THIS PROGRAM IS IN THE PUBLIC DOMAIN, AND IS FREELY REDISTRIBUTABLE.\n");
+	puts("Report bugs to kirkenda@cs.pdx.edu\n");
 	exit(exitcode);
 }
 
@@ -1485,8 +1522,9 @@ int main(argc, argv)
 		usage(argv[0], 0);
 	if (argc == 2 && !strcmp(argv[1], "--version"))
 	{
-		printf("untar %s\n", VERSION);
-		printf("Placed in public domain by the author, Steve Kirkendall\n");
+        puts("untar ");
+        puts(VERSION);
+        puts("\nPlaced in public domain by the author, Steve Kirkendall\n");
 		exit(0);
 	}
 
@@ -1542,7 +1580,8 @@ int main(argc, argv)
 		doarchive(argv[i]);
 	}
 
-	if (didabs)
-		fprintf(stderr, "WARNING: Removed leading slashes because \"-p\" wasn't given.\n");
+	if (didabs) {
+        fputs("WARNING: Removed leading slashes because \"-p\" wasn't given.\n", stderr);
+    }
 	exit(0);
 }
