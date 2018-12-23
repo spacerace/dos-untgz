@@ -62,6 +62,9 @@
 #include <sys/stat.h>
 #include <utime.h>
 #include <fcntl.h>
+// extern int mkdir(const char *__path);    /* hack against warning in watcom C */
+extern int mkdir(const char *path, mode_t mode);
+
 
 #include <string.h>
 #include <stdlib.h>

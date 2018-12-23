@@ -91,7 +91,7 @@ dos4g_586r:
 	mv untar.exe d4g_586r.exe	
 	
 upx:
-	upx -9 --8086 untar.exe -o upxed.exe
+	upx -9 --8086 x86small.exe -o upxed.exe
 
 clean:
 	rm -vf d4g_*.exe 386*.exe 486*.exe x86*.exe 586*.exe untgz.exe *.err *.o
