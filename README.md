@@ -40,12 +40,22 @@ All used optimization-switches are explained on top of makefile.
 
 Size may vary if different compiler versions used. Absolute values only for demonstration/comparison of variants.
 386/32bit variants also need `dos4gw.exe`, which needs another ~260k. 
- 
+
 # creating compatible achives
 This is quite simple, every recent linux tar+gzip should work.
 ```
 $ tar cvzf archive.tgz FILE1 FILE2 FOLDER1 ...
 ```
+
+# compling
+You need OpenWatcom and just execute:
+```
+$ make
+$ make upx
+```
+
+# UPX
+If compiling for other sub-architectures than 8086, you should remove the `--8086` switch from UPX's commandline in Makefile.
  
 # Licensing
 untar.c is public domain software. My contributions are public domain.
